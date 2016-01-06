@@ -1,8 +1,8 @@
 # Outfall Rock Protection Design Tool
 
-Author: Francisco Chaves
-Field: Coastal Engineering
-Creation Date: 06.01.2015
+#Author: Francisco Chaves
+#Field: Coastal Engineering
+#Creation Date: 06.01.2015
 
-OBJECTIVE:
+#OBJECTIVE:
 Complete tool to assist in the design of rock protection for buried marine outfalls under wave and current attack.
