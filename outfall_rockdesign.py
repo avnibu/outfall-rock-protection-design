@@ -10,6 +10,10 @@ global g
 g = 9.81 #m/s
 global pi
 pi = math.pi
+global sinh
+sinh = math.sinh
+global cosh
+cosh = math.cosh
 
 #Classes
 
@@ -44,7 +48,7 @@ class WaveLength(object):
 				self.L = self.L0 * math.tanh(2*math.pi*d/self.LIteration)
 			break
 
-class WaveMotion:
+class WaveMotion(object):
 	"""Calculation of vertical and horizontal wave velocity along a water column(Linear Wave Theory). Here, cos(theta) and sin (theta) are always 1.0, so the velocity and acceleration calculated is maximum
 	Hs (m) : significant wave height
 	tp (s) : peak wave period
@@ -53,8 +57,8 @@ class WaveMotion:
 	d (m) : water depth along the water column at which the wave velocity is going to be calculated
 	"""
 	def __init__(self, Hs,tp,L,z,d):
-		u = (Hs/2 * (g*tp/L) * math.cosh(2*math.pi*(z+d)/L) / (math.cosh(2*math.pi*d/L))
-		w = (Hs/2 * (g*tp/L) * math.sinh(2*math.pi*(z+d)/L) / (math.cosh(2*math.pi*d/L))
-		ax = (g*math.pi*Hs/L) * math.cosh(2*math.pi*(z+d)/L) / (mat.cosh(2*math.pi*d/L))
-		az = (g*math.pi*Hs/L) * math.sinh(2*math.pi*(z+d)/L) / (mat.cosh(2*math.pi*d/L))
-		pass
+		self.u = Hs/2 * (g*tp/L) * math.cosh(2*pi*(z+d)/L) / (math.cosh(2*pi*d/L))
+		self.w = Hs/2 * (g*tp/L) * math.sinh(2*pi*(z+d)/L) / (math.cosh(2*pi*d/L))
+		self.ax = (g*pi*Hs/L) * math.cosh(2*pi*(z+d)/L) / (math.cosh(2*pi*d/L))
+		self.az = (g*pi*Hs/L) * math.sinh(2*pi*(z+d)/L) / (math.cosh(2*pi*d/L))
+
