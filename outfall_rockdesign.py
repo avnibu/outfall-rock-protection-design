@@ -29,10 +29,12 @@ class WavePeriod(object):
 			self.tm = t*1.1/1.2
 			self.tm10 = t
 
-class WaveLength(WavePeriod):
-	"""Calculation of offshore and nearshore wavelength. \nargs = (TP,D)\nTP (s) = peak wave period\n d (m) = water depth"""
-	def __init__(self,t,opt,tp,d):
-		super(WavePeriod,self).__init__(t,opt)
+class WaveLength(object):
+	"""Calculation of offshore and nzearshore wavelength.
+	tp (s) : peak wave period
+	d (m) : local water depth
+	"""
+	def __init__(self,tp,d):
 		self.L0 = g*pow(tp,2)/(2*pi)
 		while True:
 			self.L = self.L0 #inititate self.L
@@ -42,7 +44,17 @@ class WaveLength(WavePeriod):
 				self.L = self.L0 * math.tanh(2*math.pi*d/self.LIteration)
 			break
 
-class WaveVelocity:
-	"""Calculation of vertical and horizontal wave velocity along a water column(Linear Wave Theory)"""
-	def __init__(self, Hs,tp,L):
+class WaveMotion:
+	"""Calculation of vertical and horizontal wave velocity along a water column(Linear Wave Theory). Here, cos(theta) and sin (theta) are always 1.0, so the velocity and acceleration calculated is maximum
+	Hs (m) : significant wave height
+	tp (s) : peak wave period
+	L (m) : wave length
+	z (m) : maximum water depth (still water level - seabed level)
+	d (m) : water depth along the water column at which the wave velocity is going to be calculated
+	"""
+	def __init__(self, Hs,tp,L,z,d):
+		u = (Hs/2 * (g*tp/L) * math.cosh(2*math.pi*(z+d)/L) / (math.cosh(2*math.pi*d/L))
+		w = (Hs/2 * (g*tp/L) * math.sinh(2*math.pi*(z+d)/L) / (math.cosh(2*math.pi*d/L))
+		ax = (g*math.pi*Hs/L) * math.cosh(2*math.pi*(z+d)/L) / (mat.cosh(2*math.pi*d/L))
+		az = (g*math.pi*Hs/L) * math.sinh(2*math.pi*(z+d)/L) / (mat.cosh(2*math.pi*d/L))
 		pass
