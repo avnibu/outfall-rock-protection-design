@@ -10,10 +10,8 @@ global g
 g = 9.81 #m/s
 global pi
 pi = math.pi
-global sinh
-sinh = math.sinh
-global cosh
-cosh = math.cosh
+global rhoW
+rhoW= 1030 #kg/m3
 
 #Classes
 
@@ -61,4 +59,23 @@ class WaveMotion(object):
 		self.w = Hs/2 * (g*tp/L) * math.sinh(2*pi*(z+d)/L) / (math.cosh(2*pi*d/L))
 		self.ax = (g*pi*Hs/L) * math.cosh(2*pi*(z+d)/L) / (math.cosh(2*pi*d/L))
 		self.az = (g*pi*Hs/L) * math.sinh(2*pi*(z+d)/L) / (math.cosh(2*pi*d/L))
+
+class Chezy(object):
+	"""Calculation of Chezy coefficient based on the particle size of the rock protection
+	h (m): water depth
+	ks (m) : particle diameter
+	"""
+	def __init__(self,h,ks):
+		if h / ks > 2:
+			self.C = 18*math.log(1+12*h/ks)
+		else:
+			self.C = 18*math.log(12*h/ks)
+
+class shearStressCurrent(object):
+	"""Calculation of bed shear stress induced by currents
+	U (m/s): depth averaged current speed
+	C (m^(1/2)/s) : Chezy coefficient
+	"""
+	def __init__(self,U,C):
+		self.tawc=rhoW*g*pow(U,2)/(pow(C,2))
 
