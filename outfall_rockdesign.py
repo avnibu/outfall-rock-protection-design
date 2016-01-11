@@ -4,6 +4,7 @@
 
 #Import Libraries
 import math
+from numpy import genfromtxt
 
 #Gobal Variables
 global g
@@ -60,6 +61,22 @@ class WaveMotion(object):
 		self.ax = (g*pi*Hs/L) * math.cosh(2*pi*(z+d)/L) / (math.cosh(2*pi*d/L))
 		self.az = (g*pi*Hs/L) * math.sinh(2*pi*(z+d)/L) / (math.cosh(2*pi*d/L))
 
+class WaveHeight(object):
+	"""Calculates wave height for a given depth.
+	Hs (m) : significant wave height
+	Tp (m) : peak wave period
+	d (m) : water depth
+	slope : cot (alpha)  (1 in x)
+	"""
+	batjjes = genfromtxt('batjjes.cv',delimiter=',') #import table with normalized wave heights from batjjes&groenendijk 2000, Wave height distribution on shallow foreshores
+	def __init__(self,Hs,Tp,d,slope):
+			self.Htr = (0.35+5.8*1/slope)*d
+			
+			if Hs/d > 0.78:
+				self.H = 0.78*d
+			else:
+				self.H = Hs
+
 class Chezy(object):
 	"""Calculation of Chezy coefficient based on the particle size of the rock protection
 	h (m): water depth
@@ -77,5 +94,29 @@ class shearStressCurrent(object):
 	C (m^(1/2)/s) : Chezy coefficient
 	"""
 	def __init__(self,U,C):
-		self.tawc=rhoW*g*pow(U,2)/(pow(C,2))
+		self.tawC=rhoW*g*pow(U,2)/(pow(C,2))
 
+class shearStressWaves(object):
+	"""Calculation of bed shear stress induced by waves
+	u0 (m) : peak orbital velocity
+	T (s) : peak wave period
+	ks (m) : particle diameter
+	"""
+	def __init__(self,u0,T,ks):
+		self.a0 = u0*T/(2*pi)
+		if self.a0 > 0.636*ks:
+			self.fw = 0.237*pow((self.a0/ks),-0.52)
+		else:
+			self.fw = 0.3
+		self.tawW = 0.5 * rhoW * self.fw * pow(u0,2) 
+
+class shearStress(object):
+	"""Combines wave and current induced shear stress
+	tawC (N/m2) : current induced shear stress
+	tawW (N/m2) : wave induced shear stress
+	"""
+	def __init__(self,tawC,tawW):
+		if tawC > 0.4 * tawW:
+			self.tawCW = tawC + 0.5*tawW
+		else:
+			self.tawCW = tawC + tawW
