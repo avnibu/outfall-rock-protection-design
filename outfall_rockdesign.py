@@ -13,6 +13,8 @@ global pi
 pi = math.pi
 global rhoW
 rhoW= 1030 #kg/m3
+global rhoR
+rhoR = 2650 #kg/m3
 
 #Classes
 
@@ -88,7 +90,7 @@ class Chezy(object):
 		else:
 			self.C = 18*math.log(12*h/ks)
 
-class shearStressCurrent(object):
+class ShearStressCurrent(object):
 	"""Calculation of bed shear stress induced by currents
 	U (m/s): depth averaged current speed
 	C (m^(1/2)/s) : Chezy coefficient
@@ -96,7 +98,7 @@ class shearStressCurrent(object):
 	def __init__(self,U,C):
 		self.tawC=rhoW*g*pow(U,2)/(pow(C,2))
 
-class shearStressWaves(object):
+class ShearStressWaves(object):
 	"""Calculation of bed shear stress induced by waves
 	u0 (m) : peak orbital velocity
 	T (s) : peak wave period
@@ -110,7 +112,7 @@ class shearStressWaves(object):
 			self.fw = 0.3
 		self.tawW = 0.5 * rhoW * self.fw * pow(u0,2) 
 
-class shearStress(object):
+class ShearStress(object):
 	"""Combines wave and current induced shear stress
 	tawC (N/m2) : current induced shear stress
 	tawW (N/m2) : wave induced shear stress
@@ -120,3 +122,17 @@ class shearStress(object):
 			self.tawCW = tawC + 0.5*tawW
 		else:
 			self.tawCW = tawC + tawW
+
+class RockDesign(object):
+	"""Calculation the required rock size for the rock protection
+	tawCW (N/m2) : combined shear stress induced by waves and currents
+	"""
+	def __init__(self,tawCW):
+		self.D = 0.20 #initialize rock diameter as 0.2m
+		Diteration = 0.1 #initialize iteration variable
+		while (self.D-Diteration)>0.00001:
+			Diteration = self.D
+			self.shields = tawCW/((rhoR-rhoW)*g*self.D)
+
+
+
