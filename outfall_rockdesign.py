@@ -70,7 +70,7 @@ class WaveHeight(object):
 	d (m) : water depth
 	slope : cot (alpha)  (1 in x)
 	"""
-	batjjes = genfromtxt('batjjes.cv',delimiter=',') #import table with normalized wave heights from batjjes&groenendijk 2000, Wave height distribution on shallow foreshores
+	batjjes = genfromtxt("batjjes.cv",delimiter=',') #import table with normalized wave heights from batjjes&groenendijk 2000, Wave height distribution on shallow foreshores
 	def __init__(self,Hs,Tp,d,slope):
 			self.Htr = (0.35+5.8*1/slope)*d
 			
