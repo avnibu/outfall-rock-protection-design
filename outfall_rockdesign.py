@@ -6,6 +6,8 @@
 import math
 from numpy import genfromtxt
 import numpy
+numpy.set_printoptions(suppress=True) #supress scientific notation for numbers.
+import openpyxl
 
 #Gobal Variables
 global g
@@ -159,15 +161,50 @@ class RockDesign(object):
 			Diteration = self.D
 			self.shields = tawCW/((rhoR-rhoW)*g*self.D)
 
+# 1. Grabs input data from an excel file
 
-# 1. Bathymetry - Extract bathymetric data from .csv file. The .csv file should be formatted as COL1:X COL2:Y COL3:Z
+inputFile = openpyxl.load_workbook('inputFile.xlsx').get_sheet_by_name('Sheet1')
+inputHs = inputFile['B5'].value
+inputPeriodType = inputFile['B6'].value
+inputT = inputFile['B7'].value
+inputSWL = inputFile['B8'].value
+inputSlope = inputFile['B9'].value
+inputCurrentSpeed = inputFile['B10'].value
 
-bathy = genfromtxt("bathy.csv",delimiter=',')
+# 2. Bathymetry - Extract bathymetric data from .csv file. The .csv file should be formatted as COL1:X COL2:Y COL3:Z
+
+bathy = genfromtxt("bathy.csv",delimiter=',') #import data from bathy.csv using numpy genfromtxt tool
 
 #generate fourth vector with distance between points
+
 bathyDistance = numpy.empty(len(bathy)) #generate an empty array with the same number of elements in a column of bathy
-bathyDistance = bathyDistance.reshape(len(bathyDistance),1) #transverse the previous array (could have been done in one line only. Two lines used for clarity)
+bathyDistance = bathyDistance.reshape(len(bathyDistance),1) #transverse the previous array (could have been done in one line only. (Two lines used for better understanding)
+bathyDepth = numpy.empty(len(bathy)).reshape(len(bathy),1) #generate an empty array with the same number of elements in a column of bathy already transversed
+
 for i in range(2,len(bathy)): #calculate the distance between each point (which will be used for plotting later)
 	bathyDistance[i] = ((bathy[i,0]-bathy[i-1,0])**2+(bathy[i,1]-bathy[i-1,1])**2)**0.5
-bathy = numpy.hstack([bathy,bathyDistance]) #appends BathyDistance as the last column of bathy
+for i in range(1,len(bathy)):
+	bathyDepth[i]= inputSWL - bathy[i,2]
+bathy = numpy.hstack([bathy,bathyDistance]) #appends bathyDistance as the last column of bathy.
+bathy = numpy.hstack([bathy,bathyDepth]) # appends bathyDepth as the last column of bathy.
+print bathy
 
+# 3. Calculation - Generates the results and compiles them in an array
+#results array description CUMULATIVE_DISTANCE/WATER_DEPTH/WAVE_HEIGT
+
+results = numpy.empty(len(bathy)).reshape(len(bathy),1) #generates an empty array with the same size as bathy
+
+# 3.1 CUMULATIVE_DISTANCE - substitute the first column of results with distance between points
+results[0] = 0 #set the value to zero (because it is text)
+results[1] = 0 #set the value to zero (because it is the first point)
+for i in range(2,len(bathy)):
+	results[i] = results[i-1] + bathy[i,3]
+
+# 3.2 WATER_DEPTH - append water depth extracted from bathy
+results = numpy.hstack([results,bathy[:,4].reshape(len(bathy),1)])
+
+# 3.3 WAVE_HEIGHT - calculate Wave Heights using Battjes
+# first we create an empty vector with the same length as results.
+#resultsWaves =
+#for i in range(0,len(results)):
+#	resultsWaves
