@@ -66,18 +66,26 @@ class WaveMotion(object):
 class WaveHeight(object):
 	"""Calculates wave height for a given depth.
 	Hs (m) : significant wave height
-	Tp (m) : peak wave period
 	d (m) : water depth
 	slope : cot (alpha)  (1 in x)
 	"""
-	batjjes = genfromtxt("batjjes.cv",delimiter=',') #import table with normalized wave heights from batjjes&groenendijk 2000, Wave height distribution on shallow foreshores
-	def __init__(self,Hs,Tp,d,slope):
+	def __init__(self,Hs,d,slope):
+		battjes = genfromtxt("battjes.csv",delimiter=',') #import table with normalized wave heights from batjjes&groenendijk 2000, Wave height distribution on shallow foreshores
+		if Hs/d >= 0.78:
+			self.Hs = 0.78*d
+		else:
 			self.Htr = (0.35+5.8*1/slope)*d
-			
-			if Hs/d > 0.78:
-				self.H = 0.78*d
-			else:
-				self.H = Hs
+			# Hrms equation .59 The Rock Manual (page 359)
+			self.Hrms = (0.6725 + 0.2025*(Hs/d))*Hs
+			# calculate the normalised Htr
+			HtrNorm = self.Htr / self.Hrms
+			#find nearest to self.Htr in column 1 of batjjes. Choose the value immideatly next to it.
+			index = int(HtrNorm / 0.05) + 1
+			#extract the relevant wave heights from Battjes table.
+			self.Hs = battjes[index,3] * self.Hrms
+			self.H2Percent = battjes[index,5] * self.Hrms
+			self.H1Percent = battjes[index,6] * self.Hrms
+			self.Hmax = battjes[index,7] * self.Hrms
 
 class Chezy(object):
 	"""Calculation of Chezy coefficient based on the particle size of the rock protection
