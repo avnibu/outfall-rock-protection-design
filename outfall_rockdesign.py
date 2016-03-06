@@ -5,6 +5,7 @@
 #Import Libraries
 import math
 from numpy import genfromtxt
+import numpy
 
 #Gobal Variables
 global g
@@ -21,6 +22,7 @@ rhoR = 2650 #kg/m3
 class WavePeriod(object):
 	"""Calculation relevant wave period parameters based on input wave period. \nargs = (t,opt)\nt (s): Known Wave period\n opt: 'tp', 'tm', 'tm10' whichever is known"""
 	def __init__(self,t,opt):
+		t = float(t)
 		if opt == 'tp':
 			self.tp = t
 			self.tm = t/1.2
@@ -40,6 +42,7 @@ class WaveLength(object):
 	d (m) : local water depth
 	"""
 	def __init__(self,tp,d):
+		tp = float(tp)
 		self.L0 = g*pow(tp,2)/(2*pi)
 		while True:
 			self.L = self.L0 #inititate self.L
@@ -58,6 +61,11 @@ class WaveMotion(object):
 	d (m) : water depth along the water column at which the wave velocity is going to be calculated
 	"""
 	def __init__(self, Hs,tp,L,z,d):
+		Hs = float(Hs)
+		tp = float(tp)
+		L = float(L)
+		z = float(z)
+		d = float(d)
 		self.u = Hs/2 * (g*tp/L) * math.cosh(2*pi*(z+d)/L) / (math.cosh(2*pi*d/L))
 		self.w = Hs/2 * (g*tp/L) * math.sinh(2*pi*(z+d)/L) / (math.cosh(2*pi*d/L))
 		self.ax = (g*pi*Hs/L) * math.cosh(2*pi*(z+d)/L) / (math.cosh(2*pi*d/L))
@@ -70,7 +78,9 @@ class WaveHeight(object):
 	slope : cot (alpha)  (1 in x)
 	"""
 	def __init__(self,Hs,d,slope):
-		battjes = genfromtxt("battjes.csv",delimiter=',') #import table with normalized wave heights from batjjes&groenendijk 2000, Wave height distribution on shallow foreshores
+		Hs = float(Hs)
+		d = float(d)
+		battjes = genfromtxt("battjes.csv",delimiter=',') #import table with normalized wave heights from Battjes&Groenendijk 2000, Wave height distribution on shallow foreshores
 		if Hs/d >= 0.78:
 			self.Hs = 0.78*d
 		else:
@@ -79,7 +89,7 @@ class WaveHeight(object):
 			self.Hrms = (0.6725 + 0.2025*(Hs/d))*Hs
 			# calculate the normalised Htr
 			HtrNorm = self.Htr / self.Hrms
-			#find nearest to self.Htr in column 1 of batjjes. Choose the value immideatly next to it.
+			#find nearest to self.Htr in column 1 of Battjes. Choose the value immediately next to it.
 			index = int(HtrNorm / 0.05) + 1
 			#extract the relevant wave heights from Battjes table.
 			self.Hs = battjes[index,3] * self.Hrms
@@ -93,6 +103,8 @@ class Chezy(object):
 	ks (m) : particle diameter
 	"""
 	def __init__(self,h,ks):
+		h = float(h)
+		ks = float(ks)
 		if h / ks > 2:
 			self.C = 18*math.log(1+12*h/ks)
 		else:
@@ -104,6 +116,8 @@ class ShearStressCurrent(object):
 	C (m^(1/2)/s) : Chezy coefficient
 	"""
 	def __init__(self,U,C):
+		U = float(U)
+		C = float(C)
 		self.tawC=rhoW*g*pow(U,2)/(pow(C,2))
 
 class ShearStressWaves(object):
@@ -113,12 +127,15 @@ class ShearStressWaves(object):
 	ks (m) : particle diameter
 	"""
 	def __init__(self,u0,T,ks):
+		u0 = float(u0)
+		T = float(T)
+		ks = float(ks)
 		self.a0 = u0*T/(2*pi)
 		if self.a0 > 0.636*ks:
 			self.fw = 0.237*pow((self.a0/ks),-0.52)
 		else:
 			self.fw = 0.3
-		self.tawW = 0.5 * rhoW * self.fw * pow(u0,2) 
+		self.tawW = 0.5 * rhoW * self.fw * pow(u0,2)
 
 class ShearStress(object):
 	"""Combines wave and current induced shear stress
@@ -143,4 +160,14 @@ class RockDesign(object):
 			self.shields = tawCW/((rhoR-rhoW)*g*self.D)
 
 
+# 1. Bathymetry - Extract bathymetric data from .csv file. The .csv file should be formatted as COL1:X COL2:Y COL3:Z
+
+bathy = genfromtxt("bathy.csv",delimiter=',')
+
+#generate fourth vector with distance between points
+bathyDistance = numpy.empty(len(bathy)) #generate an empty array with the same number of elements in a column of bathy
+bathyDistance = bathyDistance.reshape(len(bathyDistance),1) #transverse the previous array (could have been done in one line only. Two lines used for clarity)
+for i in range(2,len(bathy)): #calculate the distance between each point (which will be used for plotting later)
+	bathyDistance[i] = ((bathy[i,0]-bathy[i-1,0])**2+(bathy[i,1]-bathy[i-1,1])**2)**0.5
+bathy = numpy.hstack([bathy,bathyDistance]) #appends BathyDistance as the last column of bathy
 
