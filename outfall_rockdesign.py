@@ -4,6 +4,7 @@
 
 #Import Libraries
 import math
+from math import pi
 from numpy import genfromtxt
 import numpy
 numpy.set_printoptions(suppress=True) #supress scientific notation for numbers.
@@ -12,8 +13,6 @@ import openpyxl
 #Gobal Variables
 global g
 g = 9.81 #m/s
-global pi
-pi = math.pi
 global rhoW
 rhoW= 1030 #kg/m3
 global rhoR
@@ -44,7 +43,6 @@ class WaveLength(object):
 	d (m) : local water depth
 	"""
 	def __init__(self,tp,d):
-		tp = float(tp)
 		self.L0 = g*pow(tp,2)/(2*pi)
 		while True:
 			self.L = self.L0 #inititate self.L
@@ -82,6 +80,7 @@ class WaveHeight(object):
 	def __init__(self,Hs,d,slope):
 		Hs = float(Hs)
 		d = float(d)
+		slope = float(slope)
 		battjes = genfromtxt("battjes.csv",delimiter=',') #import table with normalized wave heights from Battjes&Groenendijk 2000, Wave height distribution on shallow foreshores
 		if Hs/d >= 0.78:
 			self.Hs = 0.78*d
@@ -93,6 +92,8 @@ class WaveHeight(object):
 			HtrNorm = self.Htr / self.Hrms
 			#find nearest to self.Htr in column 1 of Battjes. Choose the value immediately next to it.
 			index = int(HtrNorm / 0.05) + 1
+			if index > 60:
+				index = 60
 			#extract the relevant wave heights from Battjes table.
 			self.Hs = battjes[index,3] * self.Hrms
 			self.H2Percent = battjes[index,5] * self.Hrms
@@ -164,12 +165,14 @@ class RockDesign(object):
 # 1. Grabs input data from an excel file
 
 inputFile = openpyxl.load_workbook('inputFile.xlsx').get_sheet_by_name('Sheet1')
-inputHs = inputFile['B5'].value
-inputPeriodType = inputFile['B6'].value
-inputT = inputFile['B7'].value
-inputSWL = inputFile['B8'].value
-inputSlope = inputFile['B9'].value
-inputCurrentSpeed = inputFile['B10'].value
+inputHs = float(inputFile['B5'].value)
+inputPeriodType = str(inputFile['B6'].value)
+if inputPeriodType == "Tm-1,0":
+	inputPeriodType = "tm10"
+inputT = float(inputFile['B7'].value)
+inputSWL = float(inputFile['B8'].value)
+inputSlope = float(inputFile['B9'].value)
+inputCurrentSpeed = float(inputFile['B10'].value)
 
 # 2. Bathymetry - Extract bathymetric data from .csv file. The .csv file should be formatted as COL1:X COL2:Y COL3:Z
 
@@ -186,8 +189,7 @@ for i in range(2,len(bathy)): #calculate the distance between each point (which 
 for i in range(1,len(bathy)):
 	bathyDepth[i]= inputSWL - bathy[i,2]
 bathy = numpy.hstack([bathy,bathyDistance]) #appends bathyDistance as the last column of bathy.
-bathy = numpy.hstack([bathy,bathyDepth]) # appends bathyDepth as the last column of bathy.
-print bathy
+bathy = numpy.hstack([bathy,bathyDepth]) #appends bathyDepth as the last column of bathy.
 
 # 3. Calculation - Generates the results and compiles them in an array
 #results array description CUMULATIVE_DISTANCE/WATER_DEPTH/WAVE_HEIGT
@@ -205,6 +207,44 @@ results = numpy.hstack([results,bathy[:,4].reshape(len(bathy),1)])
 
 # 3.3 WAVE_HEIGHT - calculate Wave Heights using Battjes
 # first we create an empty vector with the same length as results.
-#resultsWaves =
-#for i in range(0,len(results)):
-#	resultsWaves
+
+resultsWaves = numpy.empty(len(results)).reshape(len(results),1)
+
+for i in range(0,len(results)):
+	resultsWaves[i] = WaveHeight(inputHs,results[i,1],inputSlope).Hs
+
+#then we append resultsWaves to the results array
+
+results = numpy.hstack([results,resultsWaves])
+
+# 3.4 WAVE PERIOD calculation
+
+## calculate wave periods (Tp, Tm, Tm-1,0) based on the wave period input
+
+tp = WavePeriod(inputT,inputPeriodType.lower()).tp
+tm = WavePeriod(inputT,inputPeriodType.lower()).tm
+tm10 = WavePeriod(inputT,inputPeriodType.lower()).tm10
+
+# 3.5 WAVE LENGTH calculation - Wave length varies with water depth so we need to calculate it for each point in results
+## first we need to create an empty array with the same length as results
+
+resultsWaveLength = numpy.empty(len(results)).reshape(len(results),1)
+
+## then we calculate the wave length for each point
+
+for i in range(1,len(results)):
+	resultsWaveLength[i] = WaveLength(tp,results[i,1])
+	print resultsWaveLength[i]
+
+## and then we append it to the results array
+
+#results = numpy.hstack([results,resultsWaveLength])
+
+# 3.5 WAVE_VELOCITY_NEARBED
+# first we create an empty array with the same length as results
+
+#resultsWaveVelocityNearbed = numpy.empty(len(results)).reshape(len(results),1)
+
+# calculate wave velocity nearbed
+
+#resultsWaveVelocityNearbed[i] = WaveMotion(results[i,2],tp,)
