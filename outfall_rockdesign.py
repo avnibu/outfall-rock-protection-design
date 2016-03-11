@@ -233,8 +233,8 @@ resultsWaveLength = numpy.empty(len(results)).reshape(len(results),1)
 ## then we calculate the wave length for each point
 
 for i in range(1,len(results)):
-	resultsWaveLength[i] = WaveLength(tp,results[i,1])
-	print resultsWaveLength[i]
+	resultsWaveLength[i] = WaveLength(tp,results[i,1]).L
+print resultsWaveLength
 
 ## and then we append it to the results array
 
