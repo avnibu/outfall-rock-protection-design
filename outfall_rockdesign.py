@@ -61,11 +61,6 @@ class WaveMotion(object):
 	d (m) : water depth along the water column at which the wave velocity is going to be calculated
 	"""
 	def __init__(self, Hs,tp,L,z,d):
-		Hs = float(Hs)
-		tp = float(tp)
-		L = float(L)
-		z = float(z)
-		d = float(d)
 		self.u = Hs/2 * (g*tp/L) * math.cosh(2*pi*(z+d)/L) / (math.cosh(2*pi*d/L))
 		self.w = Hs/2 * (g*tp/L) * math.sinh(2*pi*(z+d)/L) / (math.cosh(2*pi*d/L))
 		self.ax = (g*pi*Hs/L) * math.cosh(2*pi*(z+d)/L) / (math.cosh(2*pi*d/L))
@@ -106,8 +101,6 @@ class Chezy(object):
 	ks (m) : particle diameter
 	"""
 	def __init__(self,h,ks):
-		h = float(h)
-		ks = float(ks)
 		if h / ks > 2:
 			self.C = 18*math.log(1+12*h/ks)
 		else:
@@ -119,9 +112,7 @@ class ShearStressCurrent(object):
 	C (m^(1/2)/s) : Chezy coefficient
 	"""
 	def __init__(self,U,C):
-		U = float(U)
-		C = float(C)
-		self.tawC=rhoW*g*pow(U,2)/(pow(C,2))
+		self.tawC = rhoW*g*(U**2)/(C**2)
 
 class ShearStressWaves(object):
 	"""Calculation of bed shear stress induced by waves
@@ -130,9 +121,6 @@ class ShearStressWaves(object):
 	ks (m) : particle diameter
 	"""
 	def __init__(self,u0,T,ks):
-		u0 = float(u0)
-		T = float(T)
-		ks = float(ks)
 		self.a0 = u0*T/(2*pi)
 		if self.a0 > 0.636*ks:
 			self.fw = 0.237*pow((self.a0/ks),-0.52)
@@ -156,11 +144,8 @@ class RockDesign(object):
 	tawCW (N/m2) : combined shear stress induced by waves and currents
 	"""
 	def __init__(self,tawCW):
-		self.D = 0.20 #initialize rock diameter as 0.2m
-		Diteration = 0.1 #initialize iteration variable
-		while (self.D-Diteration)>0.00001:
-			Diteration = self.D
-			self.shields = tawCW/((rhoR-rhoW)*g*self.D)
+		self.shieldsCritical = 0.03
+		self.dn50 = tawCW / ((rhoR - rhoW)*g*self.shieldsCritical)
 
 # 1. Grabs input data from an excel file
 
@@ -202,8 +187,12 @@ results[1] = 0 #set the value to zero (because it is the first point)
 for i in range(2,len(bathy)):
 	results[i] = results[i-1] + bathy[i,3]
 
+#RESULTS [distance]
+
 # 3.2 WATER_DEPTH - append water depth extracted from bathy
 results = numpy.hstack([results,bathy[:,4].reshape(len(bathy),1)])
+
+#RESULTS [distance/depth]
 
 # 3.3 WAVE_HEIGHT - calculate Wave Heights using Battjes
 # first we create an empty vector with the same length as results.
@@ -216,6 +205,8 @@ for i in range(0,len(results)):
 #then we append resultsWaves to the results array
 
 results = numpy.hstack([results,resultsWaves])
+
+#RESULTS [distance/depth/Hm0]
 
 # 3.4 WAVE PERIOD calculation
 
@@ -234,17 +225,58 @@ resultsWaveLength = numpy.empty(len(results)).reshape(len(results),1)
 
 for i in range(1,len(results)):
 	resultsWaveLength[i] = WaveLength(tp,results[i,1]).L
-print resultsWaveLength
 
 ## and then we append it to the results array
 
-#results = numpy.hstack([results,resultsWaveLength])
+results = numpy.hstack([results,resultsWaveLength])
+
+#RESULTS [distance/depth/Hm0/L]
 
 # 3.5 WAVE_VELOCITY_NEARBED
 # first we create an empty array with the same length as results
 
-#resultsWaveVelocityNearbed = numpy.empty(len(results)).reshape(len(results),1)
+resultsWaveVelocityNearbed = numpy.empty(len(results)).reshape(len(results),1)
 
 # calculate wave velocity nearbed
 
-#resultsWaveVelocityNearbed[i] = WaveMotion(results[i,2],tp,)
+for i in range(1,len(results)):
+	resultsWaveVelocityNearbed[i] = (WaveMotion(results[i,2],tp,results[i,3],results[i,1]*-1,results[i,1]).u ** 2 + WaveMotion(results[i,2],tp,results[i,3],results[i,1]*-1,results[i,1]).u ** 2 ) ** 0.5
+
+##and then we append it to the results vector
+
+results = numpy.hstack([results,resultsWaveVelocityNearbed])
+
+# RESULTS [distance/depth/Hm0/L/NearbedVelocity]
+
+# 3.6 ROCK SIZE D50 Calculation. Final Step of the design. Calculation of the required rock size for each point in the array.
+## First we need to calculate the shear stress due to waves and currents. Then we calculate the rock size required.
+## The shear stress due to currents and waves depends on Chezy which in turn depends on the size of the particles the currents and waves are
+## acting upon. Because of this we need to iterate to find the solution.
+
+# First we need to create an empty vector where we are going to store the results.
+
+dn50Vector = numpy.empty(len(results)).reshape(len(results),1) # one vector for mean grain diameter [m]
+m50Vector = numpy.empty(len(results)).reshape(len(results),1) # and one for the mean grain mass (kg)
+
+for i in range(1,len(results)):
+	dn50Iteration = 1 #initialize dn50Iteration.
+	dn50 = 0.5 #initialize dn50.
+	while abs(dn50 - dn50Iteration)>0.001:
+		dn50Iteration = dn50 #dn50 iteration holds the value of dn50 determined in the previous iteration step
+		# first we need to calculate Chezy. For the first iteration we are going to assume the particle size to be 0.5mm
+		chezy = Chezy(results[i,1],dn50).C
+		#then we calculate the current induced shear stress
+		shearStressCurrents = ShearStressCurrent(inputCurrentSpeed,chezy).tawC
+		shearStressWaves = ShearStressWaves(results[i,4],tp,0.05).tawW
+		shearStress = ShearStress(shearStressCurrents,shearStressWaves).tawCW
+		dn50 = RockDesign(shearStress).dn50
+	dn50Vector[i]=dn50
+	m50Vector[i]= (dn50**3)*rhoR
+
+# We can now append the resulting vectors for dn50 and m50 to the results array
+
+results = numpy.hstack([results,dn50Vector])
+results = numpy.hstack([results,m50Vector])
+# RESULTS [distance/depth/Hm0/L/NearbedVelocity/dn50/m50]
+
+
